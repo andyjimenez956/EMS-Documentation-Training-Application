@@ -33,15 +33,16 @@ public class ReportService {
         List<User> users = userRepository.findAll();
 
         List<List<String>> rows = users.stream()
-                .map(u -> List.of(
+                .map(u -> List.<String>of(
                         String.valueOf(u.getId()),
-                        u.getEmail(),
-                        u.getFirstName(),
-                        u.getLastName(),
+                        String.valueOf(u.getEmail()),
+                        String.valueOf(u.getFirstName()),
+                        String.valueOf(u.getLastName()),
                         String.valueOf(u.getRole()),
-                        String.valueOf(u.getCreated())
+                        String.valueOf(u.getCreated())   // or getCreatedAt() depending on BaseEntity
                 ))
                 .toList();
+
 
         return new ReportResponse(title, generatedAt, columns, rows);
     }

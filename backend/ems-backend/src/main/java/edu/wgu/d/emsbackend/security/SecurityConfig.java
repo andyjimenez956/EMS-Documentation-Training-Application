@@ -20,7 +20,7 @@ public class SecurityConfig {
 
                 // Allow API calls without login during development.
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/**").permitAll()
+                        .requestMatchers("/api/reports/**").permitAll()
                         .anyRequest().authenticated()
                 )
 
