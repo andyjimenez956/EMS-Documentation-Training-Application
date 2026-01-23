@@ -3,6 +3,7 @@ package edu.wgu.d.emsbackend.user.service;
 import edu.wgu.d.emsbackend.user.User;
 import edu.wgu.d.emsbackend.user.UserRepository;
 import edu.wgu.d.emsbackend.user.dto.CreateUserRequest;
+import edu.wgu.d.emsbackend.user.dto.UpdateUserRequest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -47,8 +48,29 @@ public class UserService {
         return userRepository.findByLastNameIgnoreCaseContaining(lastNamePart.trim());
     }
 
-    public User updateUser(UUID id, edu.wgu.d.emsbackend.user.dto.UpdateUserRequest request) {
+    public List<User> searchUsers(String email, String lastName) {
 
+        boolean hasEmail = email != null && !email.isBlank();
+        boolean hasLast = lastName != null && !lastName.isBlank();
+
+        if (hasEmail) {
+
+            return userRepository.findByEmailIgnoreCase(email.trim())
+                    .map(List::of)
+                    .orElseGet(List::of);
+        }
+
+        if (hasLast) {
+
+            return userRepository.findByLastNameIgnoreCaseContaining(lastName.trim());
+        }
+
+
+        return userRepository.findAll();
+    }
+
+
+    public User updateUser(UUID id, UpdateUserRequest request) {
         User existing = getUser(id);
 
         existing.setEmail(request.getEmail().trim().toLowerCase());
@@ -58,6 +80,4 @@ public class UserService {
 
         return userRepository.save(existing);
     }
-
 }
-
