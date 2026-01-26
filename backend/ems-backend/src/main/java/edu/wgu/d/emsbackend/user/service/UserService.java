@@ -21,12 +21,20 @@ public class UserService {
     }
 
     public User createUser(CreateUserRequest request) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
+
+        // Optional but recommended: avoid duplicate emails
+        if (userRepository.findByEmailIgnoreCase(normalizedEmail).isPresent()) {
+            throw new IllegalArgumentException("Email already exists: " + normalizedEmail);
+        }
+
         User user = new User();
-        user.setEmail(request.getEmail().trim().toLowerCase());
+        user.setEmail(normalizedEmail);
         user.setFirstName(request.getFirstName().trim());
         user.setLastName(request.getLastName().trim());
         user.setRole(request.getRole());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+
         return userRepository.save(user);
     }
 
@@ -35,49 +43,64 @@ public class UserService {
     }
 
     public User getUser(UUID id) {
-        return userRepository.findById(id).orElseThrow(() ->
-                new IllegalArgumentException("User not found: " + id)
-        );
+        return userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
     }
 
     public void deleteUser(UUID id) {
+        // Optional: verify exists so delete gives a clear error
+        if (!userRepository.existsById(id)) {
+            throw new IllegalArgumentException("User not found: " + id);
+        }
         userRepository.deleteById(id);
     }
 
-    public List<User> searchByLastName(String lastNamePart) {
-        return userRepository.findByLastNameIgnoreCaseContaining(lastNamePart.trim());
-    }
-
+    /**
+     * Search logic used by /api/users/search:
+     * - If email provided => exact match (case-insensitive)
+     * - else if lastName provided => contains (case-insensitive)
+     * - else => return all
+     */
     public List<User> searchUsers(String email, String lastName) {
-
         boolean hasEmail = email != null && !email.isBlank();
         boolean hasLast = lastName != null && !lastName.isBlank();
 
         if (hasEmail) {
-
-            return userRepository.findByEmailIgnoreCase(email.trim())
+            String normalizedEmail = normalizeEmail(email);
+            return userRepository.findByEmailIgnoreCase(normalizedEmail)
                     .map(List::of)
                     .orElseGet(List::of);
         }
 
         if (hasLast) {
-
             return userRepository.findByLastNameIgnoreCaseContaining(lastName.trim());
         }
-
 
         return userRepository.findAll();
     }
 
-
     public User updateUser(UUID id, UpdateUserRequest request) {
         User existing = getUser(id);
 
-        existing.setEmail(request.getEmail().trim().toLowerCase());
+        String normalizedEmail = normalizeEmail(request.getEmail());
+
+        // Optional but recommended: avoid taking someone else's email
+        userRepository.findByEmailIgnoreCase(normalizedEmail).ifPresent(other -> {
+            if (!other.getId().equals(existing.getId())) {
+                throw new IllegalArgumentException("Email already exists: " + normalizedEmail);
+            }
+        });
+
+        existing.setEmail(normalizedEmail);
         existing.setFirstName(request.getFirstName().trim());
         existing.setLastName(request.getLastName().trim());
         existing.setRole(request.getRole());
 
         return userRepository.save(existing);
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null) return null;
+        return email.trim().toLowerCase();
     }
 }
