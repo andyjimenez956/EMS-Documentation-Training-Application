@@ -2,6 +2,7 @@ package edu.wgu.d.emsbackend.attempt;
 
 import edu.wgu.d.emsbackend.attempt.dto.AttemptResponse;
 import edu.wgu.d.emsbackend.attempt.dto.CreateAttemptRequest;
+import edu.wgu.d.emsbackend.attempt.dto.UpdateAttemptRequest;
 import edu.wgu.d.emsbackend.attempt.service.DocumentationAttemptService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -20,12 +21,30 @@ public class DocumentationAttemptController {
     }
 
     @PostMapping
-    public AttemptResponse submit(@Valid @RequestBody CreateAttemptRequest req) {
-        return toResponse(attemptService.submit(req));
+    public AttemptResponse createDraft(@Valid @RequestBody CreateAttemptRequest req) {
+        return toResponse(attemptService.createDraft(req));
+    }
+
+    @PutMapping("/{id}")
+    public AttemptResponse updateDraft(@PathVariable UUID id, @RequestBody UpdateAttemptRequest req) {
+        return toResponse(attemptService.updateDraft(id, req));
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteDraft(@PathVariable UUID id) {
+        attemptService.deleteDraft(id);
+    }
+
+    @PostMapping("/{id}/submit")
+    public AttemptResponse submit(@PathVariable UUID id) {
+        return toResponse(attemptService.submit(id));
     }
 
     @GetMapping
-    public List<AttemptResponse> listAll() {
+    public List<AttemptResponse> listAll(@RequestParam(required = false) AttemptStatus status) {
+        if (status != null) {
+            return attemptService.listByStatus(status).stream().map(this::toResponse).toList();
+        }
         return attemptService.listAll().stream().map(this::toResponse).toList();
     }
 
@@ -49,8 +68,22 @@ public class DocumentationAttemptController {
                 a.getId(),
                 a.getScenarioId(),
                 a.getStudentId(),
-                a.getNarrativeText(),
+                a.getStatus(),
                 a.getSubmittedAt(),
+                a.getPatientFirstName(),
+                a.getPatientLastName(),
+                a.getPatientAge(),
+                a.getPatientSex(),
+                a.getChiefComplaint(),
+                a.getSystolicBp(),
+                a.getDiastolicBp(),
+                a.getHeartRate(),
+                a.getRespiratoryRate(),
+                a.getSpo2(),
+                a.getAssessmentNotes(),
+                a.getInterventions(),
+                a.getDisposition(),
+                a.getNarrativeText(),
                 a.getScore(),
                 a.getFeedback()
         );

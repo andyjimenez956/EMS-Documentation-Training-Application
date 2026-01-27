@@ -15,16 +15,16 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                // For now, we disable CSRF because we're building a REST API.
                 .csrf(csrf -> csrf.disable())
-
-                // Allow API calls without login during development.
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/reports/**").permitAll()
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/api/reports/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
-
-                // Keep the defaults available (helpful during development).
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();

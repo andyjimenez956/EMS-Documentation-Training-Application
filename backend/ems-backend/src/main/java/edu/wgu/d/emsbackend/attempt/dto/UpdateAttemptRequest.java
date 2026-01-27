@@ -1,16 +1,6 @@
 package edu.wgu.d.emsbackend.attempt.dto;
 
-import jakarta.validation.constraints.NotNull;
-
-import java.util.UUID;
-
-public class CreateAttemptRequest {
-
-    @NotNull
-    private UUID scenarioId;
-
-    @NotNull
-    private UUID studentId;
+public class UpdateAttemptRequest {
 
     private String patientFirstName;
     private String patientLastName;
@@ -30,9 +20,6 @@ public class CreateAttemptRequest {
     private String disposition;
 
     private String narrativeText;
-
-    public UUID getScenarioId() { return scenarioId; }
-    public UUID getStudentId() { return studentId; }
 
     public String getPatientFirstName() { return patientFirstName; }
     public String getPatientLastName() { return patientLastName; }
