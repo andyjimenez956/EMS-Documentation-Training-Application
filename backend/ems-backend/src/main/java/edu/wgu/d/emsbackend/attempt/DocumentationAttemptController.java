@@ -2,6 +2,7 @@ package edu.wgu.d.emsbackend.attempt;
 
 import edu.wgu.d.emsbackend.attempt.dto.AttemptResponse;
 import edu.wgu.d.emsbackend.attempt.dto.CreateAttemptRequest;
+import edu.wgu.d.emsbackend.attempt.dto.ReviewAttemptRequest;
 import edu.wgu.d.emsbackend.attempt.dto.UpdateAttemptRequest;
 import edu.wgu.d.emsbackend.attempt.service.DocumentationAttemptService;
 import jakarta.validation.Valid;
@@ -38,6 +39,11 @@ public class DocumentationAttemptController {
     @PostMapping("/{id}/submit")
     public AttemptResponse submit(@PathVariable UUID id) {
         return toResponse(attemptService.submit(id));
+    }
+
+    @PutMapping("/{id}/review")
+    public AttemptResponse review(@PathVariable UUID id, @Valid @RequestBody ReviewAttemptRequest req) {
+        return toResponse(attemptService.review(id, req));
     }
 
     @GetMapping

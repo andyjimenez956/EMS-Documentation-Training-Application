@@ -4,6 +4,7 @@ import edu.wgu.d.emsbackend.attempt.AttemptStatus;
 import edu.wgu.d.emsbackend.attempt.DocumentationAttempt;
 import edu.wgu.d.emsbackend.attempt.DocumentationAttemptRepository;
 import edu.wgu.d.emsbackend.attempt.dto.CreateAttemptRequest;
+import edu.wgu.d.emsbackend.attempt.dto.ReviewAttemptRequest;
 import edu.wgu.d.emsbackend.attempt.dto.UpdateAttemptRequest;
 import edu.wgu.d.emsbackend.scenario.service.ScenarioService;
 import edu.wgu.d.emsbackend.user.service.UserService;
@@ -38,10 +39,12 @@ public class DocumentationAttemptService {
         a.setScenarioId(req.getScenarioId());
         a.setStudentId(req.getStudentId());
         a.setStatus(AttemptStatus.DRAFT);
+        a.setSubmittedAt(LocalDateTime.now());
 
         applyCreateFields(a, req);
 
         return attemptRepository.save(a);
+
     }
 
     public DocumentationAttempt updateDraft(UUID id, UpdateAttemptRequest req) {
@@ -85,6 +88,31 @@ public class DocumentationAttemptService {
         return attemptRepository.save(a);
     }
 
+    public DocumentationAttempt review(UUID id, ReviewAttemptRequest req) {
+        DocumentationAttempt a = get(id);
+
+        if (a.getStatus() != AttemptStatus.SUBMITTED) {
+            throw new IllegalStateException("Only submitted reports can be reviewed: " + id);
+        }
+
+        if (req.getReviewedBy() != null) {
+            userService.getUser(req.getReviewedBy());
+            a.setReviewedBy(req.getReviewedBy());
+        }
+
+        if (req.getScore() != null) {
+            a.setScore(req.getScore());
+        }
+
+        if (req.getFeedback() != null) {
+            a.setFeedback(trimOrNull(req.getFeedback()));
+        }
+
+        a.setReviewedAt(LocalDateTime.now());
+
+        return attemptRepository.save(a);
+    }
+
     public DocumentationAttempt get(UUID id) {
         return attemptRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Attempt not found: " + id));
@@ -107,9 +135,6 @@ public class DocumentationAttemptService {
     public List<DocumentationAttempt> listByScenario(UUID scenarioId) {
         return attemptRepository.findByScenarioOrdered(scenarioId);
     }
-
-
-
 
     private void applyCreateFields(DocumentationAttempt a, CreateAttemptRequest req) {
         if (!isBlank(req.getPatientFirstName())) a.setPatientFirstName(req.getPatientFirstName().trim());

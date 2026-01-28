@@ -12,7 +12,7 @@ public interface DocumentationAttemptRepository extends JpaRepository<Documentat
         select a from DocumentationAttempt a
         where a.studentId = :studentId
         order by
-          case when a.submittedAt is null then 1 else 0 end,
+          case when a.status = edu.wgu.d.emsbackend.attempt.AttemptStatus.SUBMITTED then 0 else 1 end,
           a.submittedAt desc,
           a.created desc
     """)
@@ -22,7 +22,7 @@ public interface DocumentationAttemptRepository extends JpaRepository<Documentat
         select a from DocumentationAttempt a
         where a.scenarioId = :scenarioId
         order by
-          case when a.submittedAt is null then 1 else 0 end,
+          case when a.status = edu.wgu.d.emsbackend.attempt.AttemptStatus.SUBMITTED then 0 else 1 end,
           a.submittedAt desc,
           a.created desc
     """)
