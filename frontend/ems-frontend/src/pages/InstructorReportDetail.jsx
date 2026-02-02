@@ -59,7 +59,7 @@ export default function InstructorReportDetail() {
                 feedback: feedback
             };
 
-            await api(`/api/attempts/${id}/review`, { method: "PUT", body: payload });
+            await api(`/api/attempts/${id}/review`, { method: "POST", body: payload });
             setMsg("Review saved.");
             await load();
         } catch (e) {

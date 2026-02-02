@@ -25,7 +25,7 @@ export default function InstructorHome() {
         setLoading(true);
         setError("");
         try {
-            const data = await api("/api/attempts");
+            const data = await api("/api/attempts/submitted");
             setItems(Array.isArray(data) ? data : []);
         } catch (e) {
             setError(e.message);

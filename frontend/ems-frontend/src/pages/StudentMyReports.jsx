@@ -26,7 +26,7 @@ export default function StudentMyReports() {
         setLoading(true);
         setError("");
         try {
-            const data = await api("/api/attempts");
+            const data = await api("/api/attempts/my");
             const all = Array.isArray(data) ? data : [];
             setItems(all.filter((a) => a.studentId === STUDENT_ID));
         } catch (e) {

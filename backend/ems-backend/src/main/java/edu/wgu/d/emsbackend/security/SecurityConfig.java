@@ -14,20 +14,29 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+
+                        // Swagger
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+
+                        // Auth info
+                        .requestMatchers("/api/auth/**").authenticated()
+
+                        // ADMIN ONLY — user management
+                        .requestMatchers("/api/users/**").hasRole("ADMIN")
+
+                        // Everything else
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
+
 }

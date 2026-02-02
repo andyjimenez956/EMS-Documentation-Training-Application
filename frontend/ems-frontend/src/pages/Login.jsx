@@ -1,46 +1,54 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { setAuth } from "../auth/auth";
 import { api } from "../api/http";
+import { setAuth, setMe, isAuthed, getRole, clearAuth } from "../auth/auth";
 
 export default function Login() {
-    const nav = useNavigate();
-    const [username, setUsername] = useState("user");
-    const [password, setPassword] = useState("Password123!");
+    const navigate = useNavigate();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
-    async function onLogin(e) {
+    // ✅ Auto-route ONLY if already authed
+    useEffect(() => {
+        if (!isAuthed()) return;
+
+        const role = getRole();
+        if (role === "ADMIN") navigate("/admin", { replace: true });
+        else if (role === "INSTRUCTOR") navigate("/instructor", { replace: true });
+        else if (role === "STUDENT") navigate("/student", { replace: true });
+    }, [navigate]);
+
+    async function onSubmit(e) {
         e.preventDefault();
         setError("");
-        setAuth(username, password);
+
         try {
-            await api("/api/scenarios");
-            nav("/student");
+            const token = btoa(`${email}:${password}`);
+            setAuth(token);
+
+            const me = await api("/api/auth/me");
+            setMe(me);
+
+            if (me.role === "ADMIN") navigate("/admin");
+            else if (me.role === "INSTRUCTOR") navigate("/instructor");
+            else navigate("/student");
         } catch (err) {
+            // if auth fails, clear bad token so you don't get stuck "logged in"
+            clearAuth();
             setError(err.message || "Login failed");
         }
     }
 
     return (
-        <div style={{ maxWidth: 420, margin: "60px auto", padding: 16, border: "1px solid #ddd", borderRadius: 10 }}>
-            <h3 style={{ marginTop: 0 }}>Log in</h3>
-            <p style={{ marginTop: 0 }}>Enter your credentials to access the EMS training system.</p>
-
-            <form onSubmit={onLogin} style={{ display: "grid", gap: 10 }}>
-                <label>
-                    Username
-                    <input value={username} onChange={(e) => setUsername(e.target.value)} style={{ width: "100%", padding: 8 }} />
-                </label>
-
-                <label>
-                    Password
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: "100%", padding: 8 }} />
-                </label>
-
-                {error && <div style={{ color: "crimson" }}>{error}</div>}
-
-                <button type="submit" style={{ padding: 10 }}>Log in</button>
+        <div>
+            <h3>Login</h3>
+            <form onSubmit={onSubmit}>
+                <input value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="email" />
+                <input type="password" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="password" />
+                <button type="submit">Login</button>
             </form>
+            {error && <div style={{color:"crimson"}}>{error}</div>}
         </div>
     );
 }
