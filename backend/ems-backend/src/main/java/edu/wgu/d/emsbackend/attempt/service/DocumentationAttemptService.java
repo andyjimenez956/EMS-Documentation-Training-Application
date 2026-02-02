@@ -6,8 +6,8 @@ import edu.wgu.d.emsbackend.attempt.DocumentationAttemptRepository;
 import edu.wgu.d.emsbackend.attempt.dto.CreateAttemptRequest;
 import edu.wgu.d.emsbackend.attempt.dto.ReviewAttemptRequest;
 import edu.wgu.d.emsbackend.attempt.dto.UpdateAttemptRequest;
-import edu.wgu.d.emsbackend.scenario.service.ScenarioService;
-import edu.wgu.d.emsbackend.user.service.UserService;
+import edu.wgu.d.emsbackend.security.DbUserPrincipal;
+import edu.wgu.d.emsbackend.user.Role;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,39 +18,33 @@ import java.util.UUID;
 public class DocumentationAttemptService {
 
     private final DocumentationAttemptRepository attemptRepository;
-    private final ScenarioService scenarioService;
-    private final UserService userService;
 
-    public DocumentationAttemptService(
-            DocumentationAttemptRepository attemptRepository,
-            ScenarioService scenarioService,
-            UserService userService
-    ) {
+    public DocumentationAttemptService(DocumentationAttemptRepository attemptRepository) {
         this.attemptRepository = attemptRepository;
-        this.scenarioService = scenarioService;
-        this.userService = userService;
     }
 
-    public DocumentationAttempt createDraft(CreateAttemptRequest req) {
-        scenarioService.get(req.getScenarioId());
-        userService.getUser(req.getStudentId());
+    public DocumentationAttempt createDraft(DbUserPrincipal actor, CreateAttemptRequest req) {
+        if (actor.getRole() != Role.STUDENT) {
+            throw new IllegalStateException("Only students can create reports");
+        }
+        if (!actor.getId().equals(req.getStudentId())) {
+            throw new IllegalStateException("StudentId must match logged in user");
+        }
 
         DocumentationAttempt a = new DocumentationAttempt();
         a.setScenarioId(req.getScenarioId());
         a.setStudentId(req.getStudentId());
         a.setStatus(AttemptStatus.DRAFT);
-        a.setSubmittedAt(LocalDateTime.now());
 
         applyCreateFields(a, req);
 
         return attemptRepository.save(a);
-
     }
 
-    public DocumentationAttempt updateDraft(UUID id, UpdateAttemptRequest req) {
-        DocumentationAttempt a = get(id);
+    public DocumentationAttempt updateDraft(DbUserPrincipal actor, UUID id, UpdateAttemptRequest req) {
+        DocumentationAttempt a = getForStudentOrInstructor(actor, id);
 
-        if (a.getStatus() == AttemptStatus.SUBMITTED) {
+        if (actor.getRole() == Role.STUDENT && a.getStatus() == AttemptStatus.SUBMITTED) {
             throw new IllegalStateException("Report is submitted and locked: " + id);
         }
 
@@ -59,18 +53,18 @@ public class DocumentationAttemptService {
         return attemptRepository.save(a);
     }
 
-    public void deleteDraft(UUID id) {
-        DocumentationAttempt a = get(id);
+    public void deleteDraft(DbUserPrincipal actor, UUID id) {
+        DocumentationAttempt a = getForStudentOrInstructor(actor, id);
 
-        if (a.getStatus() == AttemptStatus.SUBMITTED) {
+        if (actor.getRole() == Role.STUDENT && a.getStatus() == AttemptStatus.SUBMITTED) {
             throw new IllegalStateException("Report is submitted and locked: " + id);
         }
 
         attemptRepository.delete(a);
     }
 
-    public DocumentationAttempt submit(UUID id) {
-        DocumentationAttempt a = get(id);
+    public DocumentationAttempt submit(DbUserPrincipal actor, UUID id) {
+        DocumentationAttempt a = getForStudent(actor, id);
 
         if (a.getStatus() == AttemptStatus.SUBMITTED) {
             return a;
@@ -88,52 +82,61 @@ public class DocumentationAttemptService {
         return attemptRepository.save(a);
     }
 
-    public DocumentationAttempt review(UUID id, ReviewAttemptRequest req) {
-        DocumentationAttempt a = get(id);
+    public DocumentationAttempt reviewSubmitted(DbUserPrincipal actor, UUID id, ReviewAttemptRequest req) {
+        if (actor.getRole() != Role.INSTRUCTOR) {
+            throw new IllegalStateException("Only instructors can review reports");
+        }
+
+        DocumentationAttempt a = getForInstructor(id);
 
         if (a.getStatus() != AttemptStatus.SUBMITTED) {
-            throw new IllegalStateException("Only submitted reports can be reviewed: " + id);
+            throw new IllegalStateException("Only submitted reports can be reviewed");
         }
 
-        if (req.getReviewedBy() != null) {
-            userService.getUser(req.getReviewedBy());
-            a.setReviewedBy(req.getReviewedBy());
-        }
-
-        if (req.getScore() != null) {
-            a.setScore(req.getScore());
-        }
-
-        if (req.getFeedback() != null) {
-            a.setFeedback(trimOrNull(req.getFeedback()));
-        }
-
+        a.setScore(req.getScore());
+        a.setFeedback(isBlank(req.getFeedback()) ? null : req.getFeedback().trim());
+        a.setReviewedBy(actor.getId());
         a.setReviewedAt(LocalDateTime.now());
 
         return attemptRepository.save(a);
     }
 
-    public DocumentationAttempt get(UUID id) {
+    public DocumentationAttempt getOne(DbUserPrincipal actor, UUID id) {
+        return getForStudentOrInstructor(actor, id);
+    }
+
+    public List<DocumentationAttempt> listMy(DbUserPrincipal actor) {
+        if (actor.getRole() != Role.STUDENT) {
+            throw new IllegalStateException("Only students can use /my");
+        }
+        return attemptRepository.findByStudentIdOrderByCreatedDesc(actor.getId());
+    }
+
+    public List<DocumentationAttempt> listSubmitted(DbUserPrincipal actor) {
+        if (actor.getRole() != Role.INSTRUCTOR) {
+            throw new IllegalStateException("Only instructors can view submitted list");
+        }
+        return attemptRepository.findByStatusOrderBySubmittedAtDesc(AttemptStatus.SUBMITTED);
+    }
+
+    private DocumentationAttempt getForStudent(DbUserPrincipal actor, UUID id) {
+        if (actor.getRole() != Role.STUDENT) {
+            throw new IllegalStateException("Only students can perform this action");
+        }
+        return attemptRepository.findByIdAndStudentId(id, actor.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Attempt not found: " + id));
+    }
+
+    private DocumentationAttempt getForInstructor(UUID id) {
         return attemptRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Attempt not found: " + id));
     }
 
-    public List<DocumentationAttempt> listAll() {
-        return attemptRepository.findAll();
-    }
-
-    public List<DocumentationAttempt> listByStatus(AttemptStatus status) {
-        return attemptRepository.findAll().stream()
-                .filter(a -> a.getStatus() == status)
-                .toList();
-    }
-
-    public List<DocumentationAttempt> listByStudent(UUID studentId) {
-        return attemptRepository.findByStudentOrdered(studentId);
-    }
-
-    public List<DocumentationAttempt> listByScenario(UUID scenarioId) {
-        return attemptRepository.findByScenarioOrdered(scenarioId);
+    private DocumentationAttempt getForStudentOrInstructor(DbUserPrincipal actor, UUID id) {
+        if (actor.getRole() == Role.INSTRUCTOR) {
+            return getForInstructor(id);
+        }
+        return getForStudent(actor, id);
     }
 
     private void applyCreateFields(DocumentationAttempt a, CreateAttemptRequest req) {
@@ -190,7 +193,7 @@ public class DocumentationAttemptService {
     }
 
     private String generateNarrative(DocumentationAttempt a) {
-        String name = (a.getPatientFirstName() + " " + a.getPatientLastName()).trim();
+        String name = (nullSafeS(a.getPatientFirstName()) + " " + nullSafeS(a.getPatientLastName())).trim();
         if (isBlank(name)) name = "Patient";
 
         String ageSex = "";
@@ -245,5 +248,9 @@ public class DocumentationAttemptService {
 
     private String nullSafe(Integer n) {
         return n == null ? "?" : String.valueOf(n);
+    }
+
+    private String nullSafeS(String s) {
+        return s == null ? "" : s;
     }
 }

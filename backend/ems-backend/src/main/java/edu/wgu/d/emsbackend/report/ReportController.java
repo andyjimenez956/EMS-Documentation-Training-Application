@@ -15,7 +15,17 @@ public class ReportController {
     }
 
     @GetMapping("/users")
-    public ReportResponse userReport() {
-        return reportService.generateUserReport();
+    public ReportResponse usersReport() {
+        return reportService.usersReport();
+    }
+
+    @GetMapping("/attempts-by-scenario")
+    public ReportResponse attemptsByScenario() {
+        return reportService.attemptsByScenarioReport();
+    }
+
+    @GetMapping("/attempts-by-status")
+    public ReportResponse attemptsByStatus() {
+        return reportService.attemptsByStatusReport();
     }
 }
