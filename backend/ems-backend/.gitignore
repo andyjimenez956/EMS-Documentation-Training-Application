@@ -31,3 +31,22 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Node / React / Vite ###
+node_modules/
+**/node_modules/
+
+dist/
+**/dist/
+
+.vite/
+**/.vite/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.env
+.env.*
+!.env.example
