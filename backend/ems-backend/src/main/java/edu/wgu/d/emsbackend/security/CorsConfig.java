@@ -18,18 +18,16 @@ public class CorsConfig {
         cfg.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "http://127.0.0.1:5173",
-                "https://YOUR-FRONTEND.onrender.com"
+                "https://ems-frontend-s1ij.onrender.com"
         ));
 
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("*"));
 
-        // For Basic Auth sent via Authorization header, credentials=true is OK,
-        // but make sure allowedOrigins is NOT "*" (you are not using "*", good).
+
+        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+
+        // Optional but fine
         cfg.setAllowCredentials(true);
-
-        // Optional but helpful
-        cfg.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cfg);
