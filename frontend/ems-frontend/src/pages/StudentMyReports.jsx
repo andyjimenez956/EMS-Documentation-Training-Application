@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/http";
-
-const STUDENT_ID = "0993ccb9-6ae6-4bce-80f2-5a1ffb1aabe1";
+import { getUserId } from "../auth/auth";
 
 function fmt(v) {
     if (!v) return "";
@@ -26,9 +25,15 @@ export default function StudentMyReports() {
         setLoading(true);
         setError("");
         try {
+            const uid = getUserId();
+            if (!uid) {
+                setItems([]);
+                setError("Not logged in. Please log out and log back in.");
+                return;
+            }
+
             const data = await api("/api/attempts/my");
-            const all = Array.isArray(data) ? data : [];
-            setItems(all.filter((a) => a.studentId === STUDENT_ID));
+            setItems(Array.isArray(data) ? data : []);
         } catch (e) {
             setError(e.message);
         } finally {
@@ -54,7 +59,7 @@ export default function StudentMyReports() {
                     a.disposition,
                     a.narrativeText,
                     a.assessmentNotes,
-                    a.interventions
+                    a.interventions,
                 ]
                     .filter(Boolean)
                     .join(" ")
@@ -62,8 +67,8 @@ export default function StudentMyReports() {
                 return hay.includes(qq);
             })
             .sort((x, y) => {
-                const ax = x.created ? new Date(x.created).getTime() : 0;
-                const ay = y.created ? new Date(y.created).getTime() : 0;
+                const ax = x.createdAt ? new Date(x.createdAt).getTime() : 0;
+                const ay = y.createdAt ? new Date(y.createdAt).getTime() : 0;
                 const bx = x.submittedAt ? new Date(x.submittedAt).getTime() : 0;
                 const by = y.submittedAt ? new Date(y.submittedAt).getTime() : 0;
                 return (by || ay) - (bx || ax);
@@ -105,7 +110,16 @@ export default function StudentMyReports() {
             {error && <div style={{ color: "crimson" }}>{error}</div>}
 
             <div style={{ border: "1px solid #ddd", borderRadius: 10, overflow: "hidden" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "140px 1fr 260px 160px", gap: 0, background: "#f6f6f6", padding: 10, fontWeight: 700 }}>
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "140px 1fr 260px 160px",
+                        gap: 0,
+                        background: "#f6f6f6",
+                        padding: 10,
+                        fontWeight: 700,
+                    }}
+                >
                     <div>Status</div>
                     <div>Patient / Complaint</div>
                     <div>Submitted</div>
@@ -121,7 +135,7 @@ export default function StudentMyReports() {
                             gap: 0,
                             padding: 10,
                             borderTop: "1px solid #eee",
-                            alignItems: "center"
+                            alignItems: "center",
                         }}
                     >
                         <div>{a.status}</div>

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api/http";
+import { getUserId } from "../auth/auth";
 
-const STUDENT_ID = "0993ccb9-6ae6-4bce-80f2-5a1ffb1aabe1";
+
 
 export default function StudentNewReport() {
     const [scenarios, setScenarios] = useState([]);
@@ -42,9 +43,12 @@ export default function StudentNewReport() {
 
         if (!scenarioId) return setError("Please select a scenario.");
 
+        const uid = getUserId();
+        if (!uid) return setError("Not logged in. Please log out and log back in.");
+
         const payload = {
             scenarioId,
-            studentId: STUDENT_ID,
+            studentId: getUserId(),
             patientFirstName: form.patientFirstName,
             patientLastName: form.patientLastName,
             patientAge: form.patientAge === "" ? null : Number(form.patientAge),
