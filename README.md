@@ -20,6 +20,8 @@ Instructors can:
 
 To explore the application without creating an account, use:
 
+https://ems-frontend-s1ij.onrender.com/
+
 **Username:** guest1@guest.com  
 **Password:** Guest1!
 
